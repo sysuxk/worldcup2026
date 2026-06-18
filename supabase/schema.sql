@@ -39,3 +39,28 @@ as $$
 $$;
 
 grant execute on function public.get_champion_stats(text) to anon;
+
+create or replace function public.get_all_champion_stats()
+returns table(champion text, count bigint, total bigint, percent integer)
+language sql
+security definer
+set search_path = public
+as $$
+  with stats as (
+    select count(*)::bigint as total from public.champion_predictions
+  ),
+  counts as (
+    select champion, count(*)::bigint as count
+    from public.champion_predictions
+    group by champion
+    order by count desc
+  )
+  select
+    c.champion,
+    c.count,
+    s.total,
+    case when s.total = 0 then 0 else round(c.count * 100.0 / s.total)::integer end as percent
+  from counts c, stats s;
+$$;
+
+grant execute on function public.get_all_champion_stats() to anon;
